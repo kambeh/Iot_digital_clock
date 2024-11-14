@@ -15,12 +15,9 @@ Ds1302 rtc(4, 6, 5);    // DIY interface board
 TM1637 tm(2, 3);
 
 int cnt=0;
-char str[4];
 
 void setup()
-{
-    Serial.begin(9600);
-    
+{   
     // initialize the RTC
     rtc.init();
         
@@ -31,7 +28,6 @@ void setup()
 void loop() {
     static uint8_t last_second = 0;
     static int timeDigits = 0;
-    static String timeStr;
       
     // get the current time
     Ds1302::DateTime now;
@@ -42,57 +38,25 @@ void loop() {
     {
         last_second = now.second;
 
-        if (now.hour < 10) Serial.print('0');
-        Serial.print(now.hour);    // 00-23
-        Serial.print(':');
-        
-        if (now.minute < 10) Serial.print('0');
-        Serial.print(now.minute);  // 00-59
-        Serial.print(':');
-        
-        if (now.second < 10) Serial.print('0');
-        Serial.print(now.second);  // 00-59
-        Serial.println();
-
         timeDigits = timeconvert((int)now.hour, (int)now.minute, false);
 
-        Serial.print("Current Time: ");
-        //Serial.println(timeDigits);
+          if ((now.hour > 0 && now.hour < 10) || (now.hour > 12 && now.hour < 22)) {   // between 1am - 9am and 1pm - 9pm
+            // pad and offset by 1 from leftmost of the screen for 3 digits number
+            tm.display(timeDigits, true, true, 1);
+          }
+          else {
+            // display as it is
+            tm.display(timeDigits);
+          }
+    }
 
-        myIntToStr(timeDigits, str, 4);
-        timeStr = str;
-        Serial.println(timeStr);
-    }    
-
-    tm.display(timeStr);
-
+    // blink the colon in the display approx. to 1 second interval
     if (!(cnt++ % 5)) {
       tm.switchColon();
     }
     if (cnt > 50) cnt = 1;
     
     delay(100);
-}
-
-// Converts an interger into string representation, 'd' is the max length
-int myIntToStr(int x, char str[], int d)
-{
-    int i = 0;
-
-    // initialise and fill with blanks
-    for (i=0; i < d; i++) {
-        str[i] = ' ';
-    }
-    str[i] = '\0';
-    
-    // adjust index to the end of the array
-    i -= 1;
-
-    // conversion to char for each digit
-    while (x) {
-        str[i--] = (x % 10) + '0';
-        x = x / 10;
-    }
 }
 
 int timeconvert(int hr, int mins, bool is24hrs) {
