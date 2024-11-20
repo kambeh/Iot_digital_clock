@@ -14,8 +14,6 @@ Ds1302 rtc(4, 6, 5);    // DIY interface board
 // Pin 2 -> CLK
 TM1637 tm(2, 3);
 
-int cnt=0;
-
 void setup()
 {   
     // initialize the RTC
@@ -28,6 +26,9 @@ void setup()
 void loop() {
     static uint8_t last_second = 0;
     static int timeDigits = 0;
+    static bool is24hrs = true;  // false - 12hr format, true - 24hr format
+    String timeStr;
+    char str[2];
       
     // get the current time
     Ds1302::DateTime now;
@@ -38,23 +39,25 @@ void loop() {
     {
         last_second = now.second;
 
-        timeDigits = timeconvert((int)now.hour, (int)now.minute, false);
+        timeDigits = timeconvert((int)now.hour, (int)now.minute, is24hrs);
 
-          if ((now.hour > 0 && now.hour < 10) || (now.hour > 12 && now.hour < 22)) {   // between 1am - 9am and 1pm - 9pm
+          if ((now.hour > 0 && now.hour < 10) || (now.hour > 12 && now.hour < 22) && !is24hrs) {   // between 1am - 9am and 1pm - 9pm
             // pad and offset by 1 from leftmost of the screen for 3 digits number
             tm.display(timeDigits, true, true, 1);
+          }
+          else if (now.hour == 0 && is24hrs) {    // display midnight in 24-hr format
+            timeStr = itoa((int)now.minute, str, 10);
+            timeStr = ((int)now.minute < 10) ? " 00" + timeStr : " 0" + timeStr;
+            tm.display(timeStr);
           }
           else {
             // display as it is
             tm.display(timeDigits);
           }
-    }
 
-    // blink the colon in the display approx. to 1 second interval
-    if (!(cnt++ % 5)) {
-      tm.switchColon();
+          // blink the colon in one second interval
+          tm.switchColon();
     }
-    if (cnt > 50) cnt = 1;
     
     delay(100);
 }
